@@ -1,7 +1,9 @@
 pragma solidity 0.4.24;
 
 contract CertificateManager {
-    uint    idGenerator; //default is 0
+    uint    certTypeIdGenerator; //default is 0
+    uint    certIdGenerator; //default is 0
+    //uint    idGenerator; //default is 0
     
     
     // uint: certTypeId
@@ -21,8 +23,8 @@ contract CertificateManager {
     struct PersonalCert {
         uint certId;
         address ownerAddress;   // student
-        uint256 issuedDt;
-        uint256 validThroughDt;
+        string issuedDt;    
+        string validThroughDt;
         string certNo;    // issued cert. No.
         uint certTypeId;
         bool isConfirmed;  // default false;
@@ -31,29 +33,57 @@ contract CertificateManager {
     // The issuers register certificate
     function registerCertType(string _name, string _issuerName, string _descUrl) public returns(uint){
         //require(msg.value == 1 ether);
+        require( bytes(_name).length != 0);
+        
         CertType memory newCertType;
-        newCertType.certTypeId = idGenerator;
+        newCertType.certTypeId = certTypeIdGenerator;
         newCertType.name = _name;
         newCertType.issuerName = _issuerName;
         newCertType.descUrl = _descUrl;
         newCertType.issuerAddress = msg.sender;
         //newCertType.isValid = true;  // need more functionality for validation
        
-        certTypes[idGenerator] = newCertType;
-        idGenerator++;
+        certTypes[certTypeIdGenerator] = newCertType;
+        certTypeIdGenerator++;
 
-        return idGenerator-1;
+        return certTypeIdGenerator-1;
     }
+    
+    address owner;
+    
+    modifier onlyOwner() {
+       require( owner == msg.sender );
+       _;
+        
+    }
+
+    // condition: issuer only see his certType info and contract owner can see the all certType info
+    // return string: certTypeName
+    // return string: issuerName
+    // return string: descUrl
+    // sample data "TOEIC" "ETS" "https://www.ets.org/toeic"
+    // sample data "AWS Certification" "AWS" "https://aws.amazon.com/certification/?nc1=h_ls""
+    // sample data "Blockchain Proficiency" Consensys Academy" "https://consensys.net/academy/"
+    function getCertTypeInfo(uint _certTypeId) public view returns(string, string, string) {
+        require( certTypes[_certTypeId].issuerAddress == msg.sender || owner == msg.sender );
+        
+        return (
+            certTypes[_certTypeId].name,
+            certTypes[_certTypeId].issuerName,
+            certTypes[_certTypeId].descUrl
+            );
+    }
+
        
    
    // The student regiester personal certificate
    // TODO: add money
    // TODO: send some money to issuer
-   function regiesterPersonalCert(uint256 _issueDt, uint256 _validThroughDt, string _certNo, uint _certTypeId) public returns(uint) {
-       require( certTypes[_certTypeId].certTypeId != 0 );
+   function regiesterPersonalCert(string _issueDt, string _validThroughDt, string _certNo, uint _certTypeId) public returns(uint) {
+       require( bytes(certTypes[_certTypeId].name).length != 0 );
        
        PersonalCert memory newPersonalCert;
-       newPersonalCert.certId = idGenerator;
+       newPersonalCert.certId = certIdGenerator;
        newPersonalCert.ownerAddress = msg.sender;
        newPersonalCert.issuedDt = _issueDt;
        newPersonalCert.validThroughDt = _validThroughDt;
@@ -61,11 +91,12 @@ contract CertificateManager {
        newPersonalCert.certTypeId = _certTypeId;
        newPersonalCert.isConfirmed = false;
        
-       personalCerts[idGenerator] = newPersonalCert;
-       idGenerator++;
+       personalCerts[certIdGenerator] = newPersonalCert;
+       certIdGenerator++;
 
-       return idGenerator-1;
+       return certIdGenerator-1;
    }
+   
    
    
     // The issuer confirm the certificate which was regisered by students
@@ -111,6 +142,7 @@ contract CertificateManager {
     modifier checkTokenAddress(address _tokenAddress) {
        require( certTokens[_tokenAddress].tokenAddress == 0);
        require( now >= certTokens[_tokenAddress].startDt && now <= certTokens[_tokenAddress].endDt );
+       require( personalCerts[ certTokens[_tokenAddress].certId ].isConfirmed == true );
        _;
     }
    
@@ -138,7 +170,7 @@ contract CertificateManager {
     // return uint256: validThroughDt
     
     // TODO: add money
-    function viewPersonalCert(address _tokenAddress) checkTokenAddress(_tokenAddress) public view returns(string, string, string, string, uint256, uint256) {
+    function viewPersonalCert(address _tokenAddress) checkTokenAddress(_tokenAddress) public view returns(string, string, string, string, string, string) {
         uint certId = certTokens[_tokenAddress].certId;
         uint certTypeId = personalCerts[certId].certTypeId;
         
@@ -149,6 +181,20 @@ contract CertificateManager {
             personalCerts[certId].certNo, 
             personalCerts[certId].issuedDt,
             personalCerts[certId].validThroughDt);
+               
+    }
+    
+    function viewPersonalCert(uint _certId) public view returns(string, string, string, string, string, string) {
+        //uint certId = certTokens[_tokenAddress].certId;
+        //uint certTypeId = personalCerts[certId].certTypeId;
+        
+        return (
+            certTypes[personalCerts[_certId].certTypeId].name,
+            certTypes[personalCerts[_certId].certTypeId].issuerName,
+            certTypes[personalCerts[_certId].certTypeId].descUrl,
+            personalCerts[_certId].certNo, 
+            personalCerts[_certId].issuedDt,
+            personalCerts[_certId].validThroughDt);
                
     }
 }
