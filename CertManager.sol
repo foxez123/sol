@@ -1,7 +1,7 @@
 /**
  * 초기 버전으로 javascript VM에서는 작동이 잘 됐으나 web3에서 문제가 발생했음.
  * 문제점은 블록체인 데이터 업데이트 시 web3에서는 리턴값을 받아 올 수 없음.
- */ 
+ */
 pragma solidity 0.4.24;
 
 contract CertificateManager {
